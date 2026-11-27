@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: brew install bats-core shellcheck
+      - run: zsh --version
+      - run: make check
+      - run: make test
+
+  ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: sudo apt-get update && sudo apt-get install -y zsh bats shellcheck
+      - run: zsh --version
+      - run: make check
+      - run: make test
+
+  # The oldest zsh setlist is tested on, in the zsh-users project's image; bats-core is mounted in.
+  old-zsh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: bats-core/bats-core
+          ref: eb7f42f8d608ac693d7a4b67474f6714ea68cfc5 # v1.14.0
+          path: .bats
+      - run: docker run --rm -v "$PWD:/w:ro" zshusers/zsh:4.3.11 sh -c 'zsh --version && cp -r /w /tmp/w && cd /tmp/w && .bats/bin/bats tests/'
