@@ -1,0 +1,39 @@
+#!/usr/bin/env zsh
+# add-to-setlist: queue text from outside the shell, for a desktop shortcut.
+#   add-to-setlist               queue standard input; the macOS Quick Action sends the selection
+#   add-to-setlist --selection   queue the primary selection, for a Linux desktop hotkey
+# The result is printed and shown as a notification, unless SETLIST_QUIET is set.
+emulate -L zsh
+source "${0:A:h:h}/setlist.plugin.zsh" || exit 1
+
+# The command that prints the primary selection, in $reply. Fails when there is none.
+selection() {
+  if [[ -n ${WAYLAND_DISPLAY-} ]] && (( $+commands[wl-paste] )); then reply=(wl-paste --primary --no-newline)
+  elif [[ -n ${DISPLAY-} ]] && (( $+commands[xclip] )); then reply=(xclip -selection primary -out)
+  elif [[ -n ${DISPLAY-} ]] && (( $+commands[xsel] )); then reply=(xsel --primary --output)
+  else return 1; fi
+}
+
+notify() {
+  [[ -n ${SETLIST_QUIET-} ]] && return 0
+  if (( $+commands[osascript] )); then
+    osascript -e 'on run argv' -e 'display notification (item 1 of argv) with title "setlist"' -e 'end run' "$1"
+  elif (( $+commands[notify-send] )); then
+    notify-send setlist "$1"
+  fi
+  return 0
+}
+
+typeset out
+typeset -a reply
+typeset -i rc
+case ${1-} in
+  '') out=$(setlist add 2>&1); rc=$? ;;
+  --selection)
+    if selection; then out=$("${reply[@]}" 2>/dev/null | setlist add 2>&1); rc=$?
+    else out="add-to-setlist: no selection tool found; install wl-clipboard (Wayland), xclip or xsel (X11)"; rc=1; fi ;;
+  *) print -u2 "usage: add-to-setlist [--selection]"; exit 2 ;;
+esac
+if (( rc )); then print -u2 -r -- "$out"; else print -r -- "$out"; fi
+notify "$out"
+exit $rc
