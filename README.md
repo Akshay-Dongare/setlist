@@ -49,7 +49,7 @@ git clone https://github.com/Akshay-Dongare/setlist ~/.local/share/setlist
 source ~/.local/share/setlist/setlist.plugin.zsh
 ```
 
-To pin a release, add `--branch v0.1.0` to the clone.
+To pin a release, add `--branch v0.1.1` to the clone.
 
 **oh-my-zsh.** Clone it into your custom plugins, then add `setlist` to `plugins=(...)` in
 `~/.zshrc`:
@@ -83,11 +83,16 @@ setlist            show the position and the next command
 setlist reset      go back to the start
 setlist add        queue standard input, e.g. pbpaste | setlist add
 setlist off        empty the queue
+setlist -h         show the commands, the keys and the queue file's path
 ```
 
-To load a file named `reset`, `off` or `add`, give a path: `setlist ./off`. A missing file, an
-unreadable one, or one with no commands fails with a message and leaves the queue as it was; so do
-Ctrl-Q and `setlist add` with nothing to queue.
+`setlist -h`, or `--help`, reads the keys from the keymap in use, so it shows them as they are
+bound in that shell: a key you moved appears in `bindkey` notation, and an action with no key
+shows `(no key)`.
+
+To load a file named `reset`, `off`, `add`, `-h` or `--help`, give a path: `setlist ./off`. A
+missing file, an unreadable one, or one with no commands fails with a message and leaves the queue
+as it was; so do Ctrl-Q and `setlist add` with nothing to queue.
 
 ## Keys
 
@@ -199,14 +204,15 @@ full command to bind. In a sway or i3 config:
 bindsym $mod+Ctrl+q exec ~/.local/share/setlist/bin/add-to-setlist --selection
 ```
 
-`add-to-setlist` with no argument queues its standard input, as `setlist add` does. Set
-`SETLIST_QUIET=1` to skip the notification.
+`add-to-setlist` with no argument queues its standard input, as `setlist add` does, and
+`add-to-setlist -h` prints its usage. Set `SETLIST_QUIET=1` to skip the notification.
 
 ## Limitations
 
 - It works only in zsh, at an interactive prompt. Inside `ssh`, a REPL or any other program the
   keys do nothing, unless setlist is installed on that host too.
-- A plugin that resets keymaps after setlist loads removes its keys. Load setlist after it.
+- A plugin that resets keymaps after setlist loads removes its keys, and `setlist -h` then shows
+  `(no key)`. Load setlist after it.
 - A widget that tracks its own previous press, such as `history-search-backward`, starts its
   search over on each press when Ctrl-N or Ctrl-P reaches it through setlist.
 - Ctrl-Q replaces `push-line` in emacs mode, which is still on Esc-q, and `vi-quoted-insert` in

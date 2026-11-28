@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-11-27
+
+- `setlist -h` and `setlist --help` print the commands, each action's keys as they are bound in
+  the keymap in use, and the queue file's path. Before, `-h` was read as a file name.
+- `bin/add-to-setlist -h` and `--help` print its usage; an unknown argument prints the same usage
+  on standard error, before anything is read or queued.
+
 ## 0.1.0 - 2026-11-26
 
 First release.
