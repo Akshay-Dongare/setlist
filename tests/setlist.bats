@@ -179,6 +179,57 @@ WF="$BATS_TEST_DIRNAME/../macos/Add to setlist.workflow/Contents"
   [ "$output" = "hi" ] || return 1
 }
 
+@test "-h and --help print the commands, the keys bound here and the queue's path" {
+  cat > "$BATS_TEST_TMPDIR/want" <<EOF
+setlist: a command queue typed at the zsh prompt
+
+usage:
+  setlist FILE     replace the queue with a file's commands
+  setlist          show the position and the next command
+  setlist reset    go back to the start
+  setlist add      queue standard input, e.g. pbpaste | setlist add
+  setlist off      empty the queue
+  setlist -h       show this help
+
+keys:
+  Ctrl-N           type the next command; Enter runs it
+  Ctrl-P           type the previous command
+  Ctrl-Q           queue the typed line, or the clipboard
+                   when the line is empty
+
+queue: $BATS_TEST_TMPDIR/state/queue
+docs:  https://github.com/Akshay-Dongare/setlist
+EOF
+  zq "setlist -h; print rc=\$?" > "$BATS_TEST_TMPDIR/got"
+  echo "rc=0" >> "$BATS_TEST_TMPDIR/want"
+  diff "$BATS_TEST_TMPDIR/want" "$BATS_TEST_TMPDIR/got" || return 1
+  zq "setlist --help; print rc=\$?" > "$BATS_TEST_TMPDIR/got"
+  diff "$BATS_TEST_TMPDIR/want" "$BATS_TEST_TMPDIR/got" || return 1
+}
+
+@test "help goes to stdout, and leaves the queue and the position alone" {
+  run zsh -f -i -c "SETLIST_QUEUE='$BATS_TEST_TMPDIR/state/queue'; source '$REPO/setlist.plugin.zsh'; setlist -h 2>&1 >/dev/null"
+  [ -z "$output" ] || return 1
+  [ ! -e "$BATS_TEST_TMPDIR/state" ] || return 1
+  queue one two three
+  run zq "setlist '$BATS_TEST_TMPDIR/q'; setlist-next; setlist-next; setlist -h >/dev/null; setlist --help >/dev/null; setlist"
+  [ "$output" = $'setlist: 2/3\nnext: three' ] || return 1
+}
+
+@test "help shortens a queue path under HOME to ~, and only there" {
+  run zsh -f -i -c "source '$REPO/setlist.plugin.zsh'; setlist -h"
+  [ "${lines[13]}" = 'queue: ~/.local/state/setlist/queue' ] || return 1
+  run zsh -f -i -c "SETLIST_QUEUE='${HOME}x/queue'; source '$REPO/setlist.plugin.zsh'; setlist -h"
+  [ "${lines[13]}" = "queue: ${HOME}x/queue" ] || return 1
+}
+
+@test "a file named -h or --help loads by path" {
+  printf 'dash\n' > "$BATS_TEST_TMPDIR/-h"
+  printf 'long\n' > "$BATS_TEST_TMPDIR/--help"
+  run zq "cd '$BATS_TEST_TMPDIR'; setlist ./-h; setlist-next; print \$BUFFER; setlist ./--help; setlist-next; print \$BUFFER"
+  [ "$output" = $'dash\nlong' ] || return 1
+}
+
 @test "a CRLF file loads without the carriage returns" {
   printf 'one\r\n\r\n# c\r\ntwo\r\n' > "$BATS_TEST_TMPDIR/q"
   run zq "setlist '$BATS_TEST_TMPDIR/q'; setlist; setlist-next; print -r -- \"[\$BUFFER]\"; setlist-next; print -r -- \"[\$BUFFER]\""

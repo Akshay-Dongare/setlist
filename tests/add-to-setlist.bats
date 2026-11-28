@@ -13,6 +13,10 @@ shown() { cat "$BATS_TEST_TMPDIR/shown" 2>/dev/null; }
 queued() { zsh -f -c "SETLIST_QUEUE='$BATS_TEST_TMPDIR/state/queue'; source '$REPO/setlist.plugin.zsh'; _setlist_load; print -rl -- \$SETLIST_LIST"; }
 OSA='printf "%s|" "$@" > "'"$BATS_TEST_TMPDIR"'/shown"'
 NOSEL='add-to-setlist: no selection tool found; install wl-clipboard (Wayland), xclip or xsel (X11)'
+USAGE='usage: add-to-setlist [--selection]
+  add-to-setlist               queue standard input, one command per line
+  add-to-setlist --selection   queue the primary selection, for a Linux desktop hotkey
+  add-to-setlist -h            show this help'
 
 @test "standard input is queued and the result is shown as a notification" {
   stub osascript "$OSA"
@@ -72,10 +76,25 @@ NOSEL='add-to-setlist: no selection tool found; install wl-clipboard (Wayland), 
   [ ! -e "$BATS_TEST_TMPDIR/state/queue" ] || return 1
 }
 
-@test "an unknown argument prints the usage" {
-  run ha "$REPO/bin/add-to-setlist" --nope
+@test "an unknown argument prints the usage on stderr" {
+  run --separate-stderr ha "$REPO/bin/add-to-setlist" --nope <<< 'echo a'
   [ "$status" -eq 2 ] || return 1
-  [ "$output" = "usage: add-to-setlist [--selection]" ] || return 1
+  [ -z "$output" ] || return 1
+  [ "$stderr" = "$USAGE" ] || return 1
+  [ ! -e "$BATS_TEST_TMPDIR/state" ] || return 1
+}
+
+@test "-h and --help print the usage on stdout, queue nothing and notify nobody" {
+  stub osascript "$OSA"
+  local flag
+  for flag in -h --help; do
+    run --separate-stderr ha "$REPO/bin/add-to-setlist" "$flag" <<< 'echo a'
+    [ "$status" -eq 0 ] || return 1
+    [ "$output" = "$USAGE" ] || return 1
+    [ -z "$stderr" ] || return 1
+  done
+  [ -z "$(shown)" ] || return 1
+  [ ! -e "$BATS_TEST_TMPDIR/state" ] || return 1
 }
 
 @test "it runs through a symlink to it, as a hotkey path might" {

@@ -89,3 +89,47 @@ ZLE='zle() { (( $# )) || return 0; [[ $1 == -M ]] && { print -r -- "msg: $2"; re
   [ "${lines[1]}" = '"^N" down-history' ] || return 1
   [ "${lines[2]}" = '"^X^N" setlist-next' ] || return 1
 }
+
+# The three key lines of the help
+keylines() { printf '%s\n' "$output" | sed -n '/^keys:$/,/^$/p' | sed '1d;$d'; }
+
+@test "help names each action's key as it is bound in the keymap in use" {
+  run zk "" "setlist -h"
+  [ "$(keylines)" = "$(printf '%s\n' \
+    '  Ctrl-N           type the next command; Enter runs it' \
+    '  Ctrl-P           type the previous command' \
+    '  Ctrl-Q           queue the typed line, or the clipboard' \
+    '                   when the line is empty')" ] || return 1
+  run zk "" "bindkey -v; setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  Ctrl-N           type the next command; Enter runs it' ] || return 1
+}
+
+@test "help shows a moved key in bindkey notation and an unbound action as (no key)" {
+  run zk "SETLIST_KEY_NEXT='^X^N' SETLIST_KEY_PREV='\\ep' SETLIST_KEY_ADD=" "setlist -h"
+  [ "$(keylines)" = "$(printf '%s\n' \
+    '  ^X^N             type the next command; Enter runs it' \
+    '  ^[p              type the previous command' \
+    '  (no key)         queue the typed line, or the clipboard' \
+    '                   when the line is empty')" ] || return 1
+}
+
+@test "help finds keys bound by hand, lists every one, and notices keys a reset removed" {
+  run zk "SETLIST_NO_BIND=1" "bindkey '^[n' setlist-next; bindkey '^N' setlist-next; setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  Ctrl-N, ^[n      type the next command; Enter runs it' ] || return 1
+  [ "$(keylines | sed -n 2p)" = '  (no key)         type the previous command' ] || return 1
+  run zk "" "bindkey -d; setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  (no key)         type the next command; Enter runs it' ] || return 1
+  [ "$(keylines | sed -n 3p)" = '  (no key)         queue the typed line, or the clipboard' ] || return 1
+}
+
+@test "help reads Ctrl-X only for a single control letter, and lists keys from the keymap in use" {
+  run zk "SETLIST_KEY_NEXT='^Xn' SETLIST_KEY_PREV='^_' SETLIST_KEYMAPS=(vicmd)" "setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  (no key)         type the next command; Enter runs it' ] || return 1
+  run zk "SETLIST_KEYMAPS=(emacs)" "bindkey -v; setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  (no key)         type the next command; Enter runs it' ] || return 1
+  run zk "SETLIST_KEY_NEXT='^n'" "setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  Ctrl-N           type the next command; Enter runs it' ] || return 1
+  run zk "SETLIST_KEY_NEXT='^Xn' SETLIST_KEY_PREV='^_'" "setlist -h"
+  [ "$(keylines | sed -n 1p)" = '  ^Xn              type the next command; Enter runs it' ] || return 1
+  [ "$(keylines | sed -n 2p)" = '  ^_               type the previous command' ] || return 1
+}

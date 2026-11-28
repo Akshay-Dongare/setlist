@@ -64,3 +64,15 @@ count() { grep -c -- "$1" <<< "$output" || true; }
   [ "$(count 'h:9')" -eq 2 ] || return 1
   [ "$(count 'ran:42')" -eq 0 ] || return 1
 }
+
+@test "pty: setlist -h at a real prompt names the keys the line editor has" {
+  rc
+  run keys $'setlist -h\r'
+  [ "$status" -eq 0 ] || return 1
+  [[ "$output" == *"  Ctrl-N           type the next command; Enter runs it"* ]] || return 1
+  [[ "$output" == *"  Ctrl-Q           queue the typed line, or the clipboard"* ]] || return 1
+  rc "SETLIST_KEY_NEXT='^Xn'" "bindkey -v"
+  run keys $'setlist -h\r'
+  [[ "$output" == *"  ^Xn              type the next command; Enter runs it"* ]] || return 1
+  [[ "$output" == *"  Ctrl-P           type the previous command"* ]] || return 1
+}

@@ -5,6 +5,7 @@
 #   setlist <file>    replace the queue with a file's commands    setlist ./off   load a file named "off"
 #   setlist           position and next      setlist reset   back to the start
 #   setlist add       queue standard input   setlist off     empty the queue
+#   setlist -h        the commands and the keys as they are bound
 
 # One queue for every shell, so a command queued from another app is next in all of them.
 : ${SETLIST_QUEUE:=${XDG_STATE_HOME:-$HOME/.local/state}/setlist/queue}
@@ -181,10 +182,50 @@ zle -N setlist-prev
 zle -N setlist-add
 [[ -o zle && -z ${SETLIST_NO_BIND-} ]] && _setlist_bind && unsetopt flowcontrol
 
+# -h: the commands, then each action's keys read from the keymap in use, so the help is right for
+# moved, hand-bound and lost keys too. A control letter reads Ctrl-X; others as bindkey has them.
+_setlist_help() {
+  emulate -L zsh
+  local w line queue=$SETLIST_QUEUE
+  local -a found
+  local -A keys
+  for w in setlist-next setlist-prev setlist-add; do
+    found=()
+    for line in ${(f)"$(bindkey -M main 2>/dev/null)"}; do
+      [[ $line == *" $w" ]] || continue
+      line=${(Q)${${(z)line}[1]}}
+      [[ $line == '^'[A-Z] ]] && line=Ctrl-${line[2]}
+      found+=("$line")
+    done
+    (( ${#found} )) || found=('(no key)')
+    keys[$w]=${(j:, :)found}
+  done
+  [[ $queue == $HOME/* ]] && queue="~${queue#$HOME}"
+  print -r -- "setlist: a command queue typed at the zsh prompt
+
+usage:
+  setlist FILE     replace the queue with a file's commands
+  setlist          show the position and the next command
+  setlist reset    go back to the start
+  setlist add      queue standard input, e.g. pbpaste | setlist add
+  setlist off      empty the queue
+  setlist -h       show this help
+
+keys:"
+  printf '  %-16s %s\n' "${keys[setlist-next]}" 'type the next command; Enter runs it' \
+    "${keys[setlist-prev]}" 'type the previous command' \
+    "${keys[setlist-add]}" 'queue the typed line, or the clipboard' \
+    '' 'when the line is empty'
+  print -r -- "
+queue: $queue
+docs:  https://github.com/Akshay-Dongare/setlist"
+}
+
 setlist() {
   emulate -L zsh
   local -a reply
   case ${1-} in
+    -h|--help) _setlist_help ;;
     '')
       _setlist_load
       if (( ${#SETLIST_LIST} )); then

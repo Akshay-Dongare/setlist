@@ -4,6 +4,19 @@
 #   add-to-setlist --selection   queue the primary selection, for a Linux desktop hotkey
 # The result is printed and shown as a notification, unless SETLIST_QUIET is set.
 emulate -L zsh
+
+usage() {
+  print -r -- "usage: add-to-setlist [--selection]
+  add-to-setlist               queue standard input, one command per line
+  add-to-setlist --selection   queue the primary selection, for a Linux desktop hotkey
+  add-to-setlist -h            show this help"
+}
+case ${1-} in
+  ''|--selection) ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 2 ;;
+esac
+
 source "${0:A:h:h}/setlist.plugin.zsh" || exit 1
 
 # The command that prints the primary selection, in $reply. Fails when there is none.
@@ -32,7 +45,6 @@ case ${1-} in
   --selection)
     if selection; then out=$("${reply[@]}" 2>/dev/null | setlist add 2>&1); rc=$?
     else out="add-to-setlist: no selection tool found; install wl-clipboard (Wayland), xclip or xsel (X11)"; rc=1; fi ;;
-  *) print -u2 "usage: add-to-setlist [--selection]"; exit 2 ;;
 esac
 if (( rc )); then print -u2 -r -- "$out"; else print -r -- "$out"; fi
 notify "$out"

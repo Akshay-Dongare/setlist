@@ -50,5 +50,5 @@ run_as() { zsh -f -i -c "q='$BATS_TEST_TMPDIR/q' SETLIST_QUEUE='$BATS_TEST_TMPDI
   zsh -f -i -c "$names" | LC_ALL=C sort -u > "$BATS_TEST_TMPDIR/before"
   zsh -f -i -c "source '$REPO/setlist.plugin.zsh'; $names" | LC_ALL=C sort -u > "$BATS_TEST_TMPDIR/after"
   run comm -13 "$BATS_TEST_TMPDIR/before" "$BATS_TEST_TMPDIR/after"
-  [ "$output" = "$(printf '%s\n' SETLIST_I SETLIST_INODE SETLIST_LIST SETLIST_QUEUE SETLIST_SIZE _setlist_append _setlist_bind _setlist_bound _setlist_clipboard _setlist_load _setlist_pass _setlist_read _setlist_saved _setlist_store setlist setlist-add setlist-next setlist-prev)" ] || return 1
+  [ "$output" = "$(printf '%s\n' SETLIST_I SETLIST_INODE SETLIST_LIST SETLIST_QUEUE SETLIST_SIZE _setlist_append _setlist_bind _setlist_bound _setlist_clipboard _setlist_help _setlist_load _setlist_pass _setlist_read _setlist_saved _setlist_store setlist setlist-add setlist-next setlist-prev)" ] || return 1
 }
